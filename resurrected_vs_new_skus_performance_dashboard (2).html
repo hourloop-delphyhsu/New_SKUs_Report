@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKU Performance: Resurrected vs. New Launches</title>
+    <!-- Tailwind CSS for modern aesthetics -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header Controls -->
+        <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 card-shadow">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">SKU Performance Comparison</h1>
+                <p class="text-sm text-slate-500 mt-1">Comparing Reactivated (Resurrected) SKUs vs. Fresh New SKU Launches</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex items-center space-x-3">
+                <label for="yearFilter" class="text-sm font-semibold text-slate-700">Select Timeline:</label>
+                <select id="yearFilter" class="bg-slate-50 border border-slate-200 text-slate-900 text-sm font-medium rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none cursor-pointer">
+                    <option value="All">All Time (2025 - 2026)</option>
+                    <option value="2025" selected>Year 2025</option>
+                    <option value="2026">Year 2026</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- KPI Scorecards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Resurrected Count -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow border-l-4 border-l-blue-500">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Resurrected SKUs</span>
+                <p class="text-2xl font-extrabold text-slate-900 mt-1" id="kpi-res-count">0</p>
+                <p class="text-[11px] text-slate-500 mt-1" id="kpi-res-success">Successful: 0</p>
+            </div>
+            <!-- Resurrected Success Rate -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow border-l-4 border-l-emerald-500">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Resurrected Success Rate</span>
+                <p class="text-2xl font-extrabold text-emerald-600 mt-1" id="kpi-res-rate">0.00%</p>
+                <p class="text-[11px] text-slate-500 mt-1">Target Gap: > 1.5 Years</p>
+            </div>
+            <!-- New SKU Count -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow border-l-4 border-l-indigo-500">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">New SKU Launches</span>
+                <p class="text-2xl font-extrabold text-slate-900 mt-1" id="kpi-new-count">0</p>
+                <p class="text-[11px] text-slate-500 mt-1" id="kpi-new-success">Successful: 0</p>
+            </div>
+            <!-- New SKU Success Rate -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 card-shadow border-l-4 border-l-teal-500">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">New SKU Success Rate</span>
+                <p class="text-2xl font-extrabold text-teal-600 mt-1" id="kpi-new-rate">0.00%</p>
+                <p class="text-[11px] text-slate-500 mt-1">First Invoice Range: 2025-2026</p>
+            </div>
+        </div>
+
+        <!-- Two Side-by-Side Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Chart 1: Resurrected -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-800 uppercase tracking-tight">Resurrected SKUs Trend</h2>
+                    <span class="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 rounded-lg">Gap >= 1.5 Yr</span>
+                </div>
+                <div class="relative h-[320px]">
+                    <canvas id="resChart"></canvas>
+                </div>
+            </div>
+            <!-- Chart 2: New SKUs -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-800 uppercase tracking-tight">New SKU Launches Trend</h2>
+                    <span class="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-lg">Pure New SKUs</span>
+                </div>
+                <div class="relative h-[320px]">
+                    <canvas id="newChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary & Detailed Combined Table Grid -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            
+            <!-- Combined Monthly Breakdown Table -->
+            <div class="xl:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+                <h2 class="text-lg font-bold text-slate-900 mb-4" id="table-title">Combined Monthly Breakdown</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 font-semibold rounded-l-lg">Month</th>
+                                <th scope="col" class="px-4 py-3 text-right font-semibold text-blue-600 bg-blue-50/40">Resurrected Count</th>
+                                <th scope="col" class="px-4 py-3 text-right font-semibold text-blue-600 bg-blue-50/40">Resurrected Success Rate</th>
+                                <th scope="col" class="px-4 py-3 text-right font-semibold text-indigo-600 bg-indigo-50/30">New Launch Count</th>
+                                <th scope="col" class="px-4 py-3 text-right font-semibold text-indigo-600 bg-indigo-50/30 rounded-r-lg">New Launch Success Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="combined-table-body" class="divide-y divide-slate-100 font-mono">
+                            <!-- Injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Side-by-Side Yearly Summary Table -->
+            <div class="xl:col-span-1 bg-white p-6 rounded-2xl border border-slate-100 card-shadow">
+                <h2 class="text-lg font-bold text-slate-900 mb-4">Overall Performance Summary</h2>
+                <div class="space-y-6">
+                    <!-- Resurrected summary table -->
+                    <div>
+                        <h3 class="text-xs font-extrabold text-blue-600 uppercase tracking-widest mb-2">Reactivated SKUs Overview</h3>
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-2">Year</th>
+                                    <th class="p-2 text-right">Total</th>
+                                    <th class="p-2 text-right">Success</th>
+                                    <th class="p-2 text-right">Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y font-mono">
+                                <tr><td class="p-2 font-semibold">2025</td><td class="p-2 text-right">8,370</td><td class="p-2 text-right">4,047</td><td class="p-2 text-right font-bold text-emerald-600">48.35%</td></tr>
+                                <tr><td class="p-2 font-semibold">2026</td><td class="p-2 text-right">5,382</td><td class="p-2 text-right">947</td><td class="p-2 text-right font-bold text-emerald-600">17.60%</td></tr>
+                                <tr class="bg-slate-100 font-bold text-slate-900"><td class="p-2">Total</td><td class="p-2 text-right">13,752</td><td class="p-2 text-right">4,994</td><td class="p-2 text-right text-emerald-700">36.31%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- New SKU summary table -->
+                    <div>
+                        <h3 class="text-xs font-extrabold text-indigo-600 uppercase tracking-widest mb-2">New SKU Launches Overview</h3>
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-2">Year</th>
+                                    <th class="p-2 text-right">Total</th>
+                                    <th class="p-2 text-right">Success</th>
+                                    <th class="p-2 text-right">Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y font-mono">
+                                <tr><td class="p-2 font-semibold">2025</td><td class="p-2 text-right">41,871</td><td class="p-2 text-right">21,418</td><td class="p-2 text-right font-bold text-teal-600">51.15%</td></tr>
+                                <tr><td class="p-2 font-semibold">2026</td><td class="p-2 text-right">21,783</td><td class="p-2 text-right">4,502</td><td class="p-2 text-right font-bold text-teal-600">20.67%</td></tr>
+                                <tr class="bg-slate-100 font-bold text-slate-900"><td class="p-2">Total</td><td class="p-2 text-right">63,654</td><td class="p-2 text-right">25,920</td><td class="p-2 text-right text-teal-700">40.72%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Corrected Dataset directly parsed from Excel details
+        const dataset = {
+            '2025': {
+                res: {
+                    summary: { total: 8370, success: 4047, rate: '48.35%' },
+                    monthly: [
+                        { total: 411, success: 248 }, { total: 519, success: 311 },
+                        { total: 1045, success: 603 }, { total: 1062, success: 652 },
+                        { total: 875, success: 492 }, { total: 572, success: 326 },
+                        { total: 296, success: 171 }, { total: 971, success: 307 },
+                        { total: 790, success: 297 }, { total: 955, success: 338 },
+                        { total: 467, success: 174 }, { total: 407, success: 128 }
+                    ]
+                },
+                new: {
+                    summary: { total: 41871, success: 21418, rate: '51.15%' },
+                    monthly: [
+                        { total: 2910, success: 1582 }, { total: 3405, success: 2032 },
+                        { total: 6640, success: 3899 }, { total: 5885, success: 3656 },
+                        { total: 3207, success: 1610 }, { total: 1758, success: 1022 },
+                        { total: 1454, success: 873 },  { total: 2545, success: 953 },
+                        { total: 3825, success: 1309 }, { total: 4771, success: 1927 },
+                        { total: 2865, success: 1278 }, { total: 2606, success: 1277 }
+                    ]
+                }
+            },
+            '2026': {
+                res: {
+                    summary: { total: 5382, success: 947, rate: '17.60%' },
+                    monthly: [
+                        { total: 407, success: 160 }, { total: 643, success: 193 },
+                        { total: 1366, success: 375 }, { total: 1033, success: 174 },
+                        { total: 907, success: 33 }, { total: 1026, success: 12 },
+                        { total: null, success: null }, { total: null, success: null },
+                        { total: null, success: null }, { total: null, success: null },
+                        { total: null, success: null }, { total: null, success: null }
+                    ]
+                },
+                new: {
+                    summary: { total: 21783, success: 4502, rate: '20.67%' },
+                    monthly: [
+                        { total: 1638, success: 665 }, { total: 2481, success: 1073 },
+                        { total: 4942, success: 1640 }, { total: 5082, success: 880 },
+                        { total: 3557, success: 175 }, { total: 4083, success: 69 },
+                        { total: null, success: null }, { total: null, success: null },
+                        { total: null, success: null }, { total: null, success: null },
+                        { total: null, success: null }, { total: null, success: null }
+                    ]
+                }
+            }
+        };
+
+        // Precompute All Time (Combined 25 & 26)
+        dataset['All'] = {
+            res: {
+                summary: { total: 13752, success: 4994, rate: '36.31%' },
+                monthly: []
+            },
+            new: {
+                summary: { total: 63654, success: 25920, rate: '40.72%' },
+                monthly: []
+            }
+        };
+
+        for (let i = 0; i < 12; i++) {
+            // Resurrected All
+            const resTot25 = dataset['2025'].res.monthly[i].total;
+            const resSuc25 = dataset['2025'].res.monthly[i].success;
+            const resTot26 = dataset['2026'].res.monthly[i].total;
+            const resSuc26 = dataset['2026'].res.monthly[i].success;
+            
+            const resCombinedTotal = (resTot25 || 0) + (resTot26 || 0);
+            const resCombinedSuccess = (resSuc25 || 0) + (resSuc26 || 0);
+            
+            dataset['All'].res.monthly.push({
+                total: resCombinedTotal === 0 && resTot25 === null ? null : resCombinedTotal,
+                success: resCombinedTotal === 0 && resTot25 === null ? null : resCombinedSuccess
+            });
+
+            // New SKUs All
+            const newTot25 = dataset['2025'].new.monthly[i].total;
+            const newSuc25 = dataset['2025'].new.monthly[i].success;
+            const newTot26 = dataset['2026'].new.monthly[i].total;
+            const newSuc26 = dataset['2026'].new.monthly[i].success;
+            
+            const newCombinedTotal = (newTot25 || 0) + (newTot26 || 0);
+            const newCombinedSuccess = (newSuc25 || 0) + (newSuc26 || 0);
+
+            dataset['All'].new.monthly.push({
+                total: newCombinedTotal === 0 && newTot25 === null ? null : newCombinedTotal,
+                success: newCombinedTotal === 0 && newTot25 === null ? null : newCombinedSuccess
+            });
+        }
+
+        // Global Chart Registry
+        let activeCharts = {};
+
+        // Utility formatting
+        const fmt = (val) => val === null ? '-' : val.toLocaleString();
+        const ratePct = (success, total) => {
+            if (total === null || total === 0) return '-';
+            return ((success / total) * 100).toFixed(2) + '%';
+        };
+
+        function updateDashboard(yearKey) {
+            const data = dataset[yearKey];
+
+            // 1. Update Scorecards
+            document.getElementById('kpi-res-count').innerText = fmt(data.res.summary.total);
+            document.getElementById('kpi-res-success').innerText = `Successful: ${fmt(data.res.summary.success)}`;
+            document.getElementById('kpi-res-rate').innerText = data.res.summary.rate;
+
+            document.getElementById('kpi-new-count').innerText = fmt(data.new.summary.total);
+            document.getElementById('kpi-new-success').innerText = `Successful: ${fmt(data.new.summary.success)}`;
+            document.getElementById('kpi-new-rate').innerText = data.new.summary.rate;
+
+            document.getElementById('table-title').innerText = `Combined Monthly Breakdown - ${yearKey === 'All' ? 'Combined (25/26)' : 'Year ' + yearKey}`;
+
+            // 2. Generate Table Body
+            const tbody = document.getElementById('combined-table-body');
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < 12; i++) {
+                const resM = data.res.monthly[i];
+                const newM = data.new.monthly[i];
+
+                if (resM.total === null && newM.total === null) continue;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-semibold text-slate-900">${months[i]}</td>
+                    <td class="px-4 py-3 text-right text-blue-700 bg-blue-50/10">${fmt(resM.total)}</td>
+                    <td class="px-4 py-3 text-right font-bold text-blue-700 bg-blue-50/10">${ratePct(resM.success, resM.total)}</td>
+                    <td class="px-4 py-3 text-right text-indigo-700 bg-indigo-50/10">${fmt(newM.total)}</td>
+                    <td class="px-4 py-3 text-right font-bold text-indigo-700 bg-indigo-50/10">${ratePct(newM.success, newM.total)}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            // 3. Render Charts
+            buildChart('resChart', '#2563eb', 'Resurrected SKUs Count', data.res.monthly);
+            buildChart('newChart', '#6366f1', 'New Launch Count', data.new.monthly);
+        }
+
+        function buildChart(canvasId, mainColor, barLabel, monthlyArray) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Destroy existing instance to prevent visual glitching
+            if (activeCharts[canvasId]) {
+                activeCharts[canvasId].destroy();
+            }
+
+            // Map data
+            const labels = [];
+            const barData = [];
+            const lineData = [];
+
+            monthlyArray.forEach((m, idx) => {
+                if (m.total !== null) {
+                    labels.push(months[idx]);
+                    barData.push(m.total);
+                    lineData.push(((m.success / m.total) * 100).toFixed(2));
+                }
+            });
+
+            activeCharts[canvasId] = new Chart(ctx, {
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: 'Success Rate (%)',
+                            data: lineData,
+                            borderColor: '#10b981', // Highlight Green success line
+                            backgroundColor: '#10b981',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#10b981',
+                            pointBorderWidth: 2,
+                            pointRadius: 4.5,
+                            yAxisID: 'yRate',
+                            tension: 0.25
+                        },
+                        {
+                            type: 'bar',
+                            label: barLabel,
+                            data: barData,
+                            backgroundColor: mainColor + 'cc',
+                            borderRadius: 6,
+                            yAxisID: 'yCount'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        yCount: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: '#f1f5f9' },
+                            title: { display: true, text: 'SKU Count', font: { weight: 'bold' } }
+                        },
+                        yRate: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Success Rate (%)', font: { weight: 'bold' } }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { boxWidth: 12, font: { weight: '600' } } }
+                    }
+                }
+            });
+        }
+
+        // Setup drop-down trigger
+        document.getElementById('yearFilter').addEventListener('change', (e) => {
+            updateDashboard(e.target.value);
+        });
+
+        // Initialize setup on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            updateDashboard('2025');
+        });
+    </script>
+</body>
+</html>
