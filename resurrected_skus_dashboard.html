@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resurrected SKUs Dashboard</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header & Controls -->
+        <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Resurrected SKUs Performance Dashboard</h1>
+                <p class="text-sm text-slate-500 mt-1">Snapshot of old SKUs re-activated after >1.5 years gap (2025-2026)</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex items-center space-x-3">
+                <label for="yearSelect" class="text-sm font-medium text-slate-700">Select Year:</label>
+                <select id="yearSelect" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none cursor-pointer">
+                    <option value="All">All (2025 & 2026)</option>
+                    <option value="2025" selected>2025 Year</option>
+                    <option value="2026">2026 Year</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- KPI Scorecards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Total Card -->
+            <div class="card bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
+                <h3 class="text-sm font-medium text-slate-500 uppercase tracking-wider">Total Resurrected SKUs</h3>
+                <div class="mt-2 flex items-baseline">
+                    <p class="text-3xl font-extrabold text-slate-900" id="kpi-total">0</p>
+                </div>
+            </div>
+            <!-- Success Card -->
+            <div class="card bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
+                <h3 class="text-sm font-medium text-slate-500 uppercase tracking-wider">Successful SKUs</h3>
+                <div class="mt-2 flex items-baseline">
+                    <p class="text-3xl font-extrabold text-slate-900" id="kpi-success">0</p>
+                </div>
+            </div>
+            <!-- Rate Card -->
+            <div class="card bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-indigo-500">
+                <h3 class="text-sm font-medium text-slate-500 uppercase tracking-wider">Overall Success Rate</h3>
+                <div class="mt-2 flex items-baseline">
+                    <p class="text-3xl font-extrabold text-slate-900" id="kpi-rate">0.00%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4" id="chart-title">Monthly Trend: Count vs. Success Rate</h2>
+            <div class="relative h-[400px] w-full">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tables Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Monthly Table -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4" id="table-title">Monthly Breakdown</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-500">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 rounded-tl-lg">Month</th>
+                                <th scope="col" class="px-4 py-3 text-right">Total Resurrected</th>
+                                <th scope="col" class="px-4 py-3 text-right">Successful SKUs</th>
+                                <th scope="col" class="px-4 py-3 text-right rounded-tr-lg">Success Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthly-table-body" class="divide-y divide-slate-100">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Yearly Summary Table -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Yearly Summary Overview</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-500">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b-2 border-slate-200">
+                            <tr>
+                                <th scope="col" class="px-3 py-3">Year</th>
+                                <th scope="col" class="px-3 py-3 text-right">Total</th>
+                                <th scope="col" class="px-3 py-3 text-right">Success</th>
+                                <th scope="col" class="px-3 py-3 text-right">Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-3 py-3 font-medium text-slate-900">2025</td>
+                                <td class="px-3 py-3 text-right">8,370</td>
+                                <td class="px-3 py-3 text-right">4,047</td>
+                                <td class="px-3 py-3 text-right font-medium text-emerald-600">48.35%</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-3 py-3 font-medium text-slate-900">2026</td>
+                                <td class="px-3 py-3 text-right">5,382</td>
+                                <td class="px-3 py-3 text-right">947</td>
+                                <td class="px-3 py-3 text-right font-medium text-emerald-600">17.58%</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="font-bold text-slate-900 bg-slate-100">
+                                <td class="px-3 py-3">Total</td>
+                                <td class="px-3 py-3 text-right">13,752</td>
+                                <td class="px-3 py-3 text-right">4,994</td>
+                                <td class="px-3 py-3 text-right text-emerald-700">36.31%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // --- Data Store ---
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const rawData = {
+            '2025': {
+                summary: { total: 8370, success: 4047, rate: 48.35 },
+                monthly: [
+                    { total: 411, success: 248 }, { total: 519, success: 311 },
+                    { total: 1045, success: 603 }, { total: 1062, success: 652 },
+                    { total: 875, success: 492 }, { total: 572, success: 326 },
+                    { total: 296, success: 171 }, { total: 971, success: 307 },
+                    { total: 790, success: 297 }, { total: 955, success: 338 },
+                    { total: 467, success: 174 }, { total: 407, success: 128 }
+                ]
+            },
+            '2026': {
+                summary: { total: 5382, success: 947, rate: 17.58 },
+                monthly: [
+                    { total: 407, success: 160 }, { total: 643, success: 193 },
+                    { total: 1366, success: 375 }, { total: 1033, success: 174 },
+                    { total: 907, success: 33 }, { total: 1026, success: 12 },
+                    { total: null, success: null }, { total: null, success: null },
+                    { total: null, success: null }, { total: null, success: null },
+                    { total: null, success: null }, { total: null, success: null }
+                ]
+            }
+        };
+
+        // 計算 'All' aggregated data
+        rawData['All'] = {
+            summary: { total: 13752, success: 4994, rate: 36.31 },
+            monthly: []
+        };
+        
+        for (let i = 0; i < 12; i++) {
+            let m25 = rawData['2025'].monthly[i];
+            let m26 = rawData['2026'].monthly[i];
+            let tot = (m25.total || 0) + (m26.total || 0);
+            let suc = (m25.success || 0) + (m26.success || 0);
+            
+            if (tot === 0 && m25.total === null && m26.total === null) {
+                rawData['All'].monthly.push({ total: null, success: null });
+            } else {
+                rawData['All'].monthly.push({ total: tot, success: suc });
+            }
+        }
+
+        // --- Utility Functions ---
+        const formatNum = (num) => num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : '0';
+        const calcRate = (success, total) => total ? ((success / total) * 100).toFixed(2) : '0.00';
+
+        // --- Chart Instance ---
+        let chartInstance = null;
+
+        // --- Update UI ---
+        function updateDashboard(yearKey) {
+            const data = rawData[yearKey];
+
+            // 1. Update KPIs
+            document.getElementById('kpi-total').innerText = formatNum(data.summary.total);
+            document.getElementById('kpi-success').innerText = formatNum(data.summary.success);
+            document.getElementById('kpi-rate').innerText = data.summary.rate + '%';
+            document.getElementById('table-title').innerText = yearKey === 'All' ? 'Combined Monthly Breakdown (25/26)' : `Monthly Breakdown - ${yearKey}`;
+
+            // 2. Update Monthly Table
+            const tbody = document.getElementById('monthly-table-body');
+            tbody.innerHTML = '';
+            
+            data.monthly.forEach((m, idx) => {
+                if (m.total !== null) {
+                    const rate = calcRate(m.success, m.total);
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 border-b border-slate-50 last:border-0';
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 font-medium text-slate-900">${months[idx]}</td>
+                        <td class="px-4 py-3 text-right">${formatNum(m.total)}</td>
+                        <td class="px-4 py-3 text-right">${formatNum(m.success)}</td>
+                        <td class="px-4 py-3 text-right font-semibold ${rate > 40 ? 'text-emerald-600' : 'text-slate-600'}">${rate}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            // 3. Update Chart
+            updateChart(yearKey);
+        }
+
+        function updateChart(yearKey) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            let datasets = [];
+
+            if (yearKey === 'All') {
+                // Show side-by-side for All
+                const rate25 = rawData['2025'].monthly.map(m => m.total ? (m.success/m.total)*100 : null);
+                const rate26 = rawData['2026'].monthly.map(m => m.total ? (m.success/m.total)*100 : null);
+                
+                datasets = [
+                    {
+                        type: 'line',
+                        label: '2025 Success Rate (%)',
+                        data: rate25,
+                        borderColor: '#10b981', // Emerald 500
+                        backgroundColor: '#10b981',
+                        borderWidth: 2,
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    },
+                    {
+                        type: 'line',
+                        label: '2026 Success Rate (%)',
+                        data: rate26,
+                        borderColor: '#84cc16', // Lime 500
+                        backgroundColor: '#84cc16',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    },
+                    {
+                        type: 'bar',
+                        label: '2025 Resurrected SKUs',
+                        data: rawData['2025'].monthly.map(m => m.total),
+                        backgroundColor: '#3b82f6', // Blue 500
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'bar',
+                        label: '2026 Resurrected SKUs',
+                        data: rawData['2026'].monthly.map(m => m.total),
+                        backgroundColor: '#ef4444', // Red 500
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    }
+                ];
+            } else {
+                // Show single year
+                const colorBar = yearKey === '2025' ? '#3b82f6' : '#ef4444';
+                const currentData = rawData[yearKey].monthly;
+                const rates = currentData.map(m => m.total ? (m.success/m.total)*100 : null);
+                const totals = currentData.map(m => m.total);
+
+                datasets = [
+                    {
+                        type: 'line',
+                        label: `${yearKey} Success Rate (%)`,
+                        data: rates,
+                        borderColor: '#10b981', // Solid Green for rate
+                        backgroundColor: '#10b981',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#10b981',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    },
+                    {
+                        type: 'bar',
+                        label: `${yearKey} Resurrected SKUs`,
+                        data: totals,
+                        backgroundColor: colorBar,
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    }
+                ];
+            }
+
+            chartInstance = new Chart(ctx, {
+                data: {
+                    labels: months,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        if (context.dataset.yAxisID === 'y1') {
+                                            label += context.parsed.y.toFixed(2) + '%';
+                                        } else {
+                                            label += formatNum(context.parsed.y);
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Resurrected SKU Count' },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'Success Rate (%)' },
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false } // Avoid overlapping grid lines
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('yearSelect').addEventListener('change', (e) => {
+            updateDashboard(e.target.value);
+        });
+
+        // Initialize with default year
+        window.addEventListener('DOMContentLoaded', () => {
+            updateDashboard('2025');
+        });
+    </script>
+</body>
+</html>
